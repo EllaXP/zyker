@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zyklus & Perioden Kalender</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    :root {
+      --font-stack: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      --color-bg: #FAF7F5;
+      --color-card: #FFFFFF;
+      --color-primary-rose: #F472B6;
+      --color-period: #F43F5E;
+      --color-period-soft: #FFE4E6;
+      --color-period-border: #FDA4AF;
+      --color-predicted: #FECDD3;
+      --color-fertile: #A7F3D0;
+      --color-fertile-soft: #ECFDF5;
+      --color-ovulation: #818CF8;
+      --color-ovulation-soft: #EEF2FF;
+      --color-text-main: #27272A;
+      --color-text-muted: #71717A;
+    }
+
+    body {
+      font-family: var(--font-stack);
+      background-color: var(--color-bg);
+      color: var(--color-text-main);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Kalender-Zellen Akzente & Verläufe */
+    .day-cell {
+      transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .day-cell:hover:not(.empty-day) {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(244, 63, 94, 0.12);
+    }
+
+    /* Status-Highlights für Kalendertage */
+    .status-period {
+      background: linear-gradient(145deg, #FFE4E6, #FECDD3) !important;
+      border: 1.5px solid #F43F5E !important;
+      color: #9F1239 !important;
+      font-weight: 600;
+    }
+    .status-predicted {
+      background: #FFF1F2 !important;
+      border: 1.5px dashed #FB7185 !important;
+      color: #BE123C !important;
+      font-weight: 500;
+    }
+    .status-fertile {
+      background: linear-gradient(145deg, #ECFDF5, #D1FAE5) !important;
+      border: 1.5px solid #34D399 !important;
+      color: #065F46 !important;
+    }
+    .status-ovulation {
+      background: linear-gradient(135deg, #EEF2FF, #E0E7FF) !important;
+      border: 1.5px solid #6366F1 !important;
+      color: #3730A3 !important;
+      font-weight: 700;
+    }
+    .status-today {
+      position: relative;
+    }
+    .status-today::after {
+      content: '';
+      position: absolute;
+      bottom: 4px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 5px;
+      height: 5px;
+      border-radius: 9999px;
+      background-color: #27272A;
+    }
+
+    /* Subtile Indikatoren */
+    .pill-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      padding: 0.25rem 0.65rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    /* Modal Animation */
+    .modal-backdrop {
+      background-color: rgba(39, 39, 42, 0.35);
+      backdrop-filter: blur(3px);
+      transition: opacity 0.2s ease-out;
+    }
+    .modal-card {
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Benutzerdefinierte Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #E4E4E7;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body class="min-h-screen py-6 px-3 sm:px-6 md:px-10 flex flex-col items-center">
+      <div class="w-full max-w-5xl">
+        <!-- Header -->
+        <header class="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8 bg-white/80 backdrop-blur-md p-5 sm:p-6 rounded-3xl shadow-sm border border-rose-100/60">
+          <div class="flex items-center gap-3">
+        <!-- Bild ersetzt das rosa Quadrat vollständig -->
+        <img 
+          src="ptracker-icon.png" 
+          alt="App Icon" 
+          class="w-12 h-12 object-cover shadow-md shadow-rose-200 flex-shrink-0" 
+          style="border-radius: 5px;"
+        >
+        <div>
+          <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900">Zyklus- & Fruchtbarkeitskalender</h1>
+          <p class="text-xs sm:text-sm text-zinc-500">Natürliche Vorhersagen & Körperbewusstsein</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="btnSettings" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium bg-rose-50 hover:bg-rose-100 text-rose-700 transition flex items-center gap-1.5 border border-rose-200/60">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+          Einstellungen
+        </button>
+        <button id="btnToday" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium bg-zinc-900 hover:bg-zinc-800 text-white transition shadow-sm">
+          Heute
+        </button>
+      </div>
+    </header>
+
+    <!-- Hauptbereich: Kalender + Seitenleiste -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      
+      <!-- Kalender Bereich (8 Cols) -->
+      <main class="lg:col-span-8 bg-white rounded-3xl p-5 sm:p-7 shadow-sm border border-stone-200/60">
+        <!-- Kalender Navigation -->
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center gap-3">
+            <h2 id="calendarMonthYear" class="text-lg sm:text-xl font-bold tracking-tight text-zinc-800 capitalize">
+              <!-- Dynamisch: z.B. Oktober 2026 -->
+            </h2>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button id="prevMonth" aria-label="Vorheriger Monat" class="w-9 h-9 rounded-full flex items-center justify-center hover:bg-zinc-100 text-zinc-600 transition">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M15 19l-7-7 7-7"></path></svg>
+            </button>
+            <button id="nextMonth" aria-label="Nächster Monat" class="w-9 h-9 rounded-full flex items-center justify-center hover:bg-zinc-100 text-zinc-600 transition">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M9 5l7 7-7 7"></path></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Wochentage -->
+        <div class="grid grid-cols-7 gap-1 sm:gap-2 text-center text-xs font-semibold text-zinc-400 mb-2 uppercase tracking-wider">
+          <div>Mo</div>
+          <div>Di</div>
+          <div>Mi</div>
+          <div>Do</div>
+          <div>Fr</div>
+          <div>Sa</div>
+          <div>So</div>
+        </div>
+
+        <!-- Tage-Gitter -->
+        <div id="calendarDaysGrid" class="grid grid-cols-7 gap-1.5 sm:gap-2.5">
+          <!-- Wird dynamisch mit JS befüllt -->
+        </div>
+
+        <!-- Kalender-Legende -->
+        <div class="mt-8 pt-5 border-t border-zinc-100 flex flex-wrap items-center justify-center sm:justify-start gap-3 sm:gap-4 text-xs font-medium text-zinc-600">
+          <div class="flex items-center gap-1.5">
+            <span class="w-3.5 h-3.5 rounded-md bg-rose-100 border border-rose-500 inline-block"></span>
+            <span>Periode</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="w-3.5 h-3.5 rounded-md bg-rose-50 border border-dashed border-rose-400 inline-block"></span>
+            <span>Prognose</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="w-3.5 h-3.5 rounded-md bg-emerald-50 border border-emerald-400 inline-block"></span>
+            <span>Fruchtbare Tage</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="w-3.5 h-3.5 rounded-md bg-indigo-50 border border-indigo-500 inline-block"></span>
+            <span>Eisprung</span>
+          </div>
+        </div>
+      </main>
+
+      <!-- Seitenleiste: Details zum Tag & Quick-Status (4 Cols) -->
+      <aside class="lg:col-span-4 flex flex-col gap-5">
+        
+        <!-- Zyklus-Statuskarte -->
+        <div class="bg-gradient-to-br from-rose-500 to-pink-500 rounded-3xl p-6 text-white shadow-lg shadow-rose-200">
+          <div class="flex items-center justify-between mb-4">
+            <span class="text-xs uppercase tracking-wider font-semibold text-rose-100">Aktueller Status</span>
+            <span id="currentCycleDayBadge" class="bg-white/20 backdrop-blur-sm text-white px-2.5 py-1 rounded-full text-xs font-medium">Tag --</span>
+          </div>
+          <h3 id="cyclePhaseTitle" class="text-2xl font-bold tracking-tight mb-1">Zyklusphase</h3>
+          <p id="cyclePhaseDesc" class="text-sm text-rose-100/90 leading-relaxed">
+            Wähle im Kalender deinen letzten Periodenbeginn, um personalisierte Vorhersagen zu erhalten.
+          </p>
+
+          <div class="mt-5 pt-4 border-t border-white/20 flex items-center justify-between text-xs text-rose-100">
+            <div>
+              <p class="opacity-80">Nächste Periode ca.</p>
+              <p id="nextPeriodPredictionLabel" class="font-bold text-white text-sm mt-0.5">--</p>
+            </div>
+            <div class="text-right">
+              <p class="opacity-80">Nächster Eisprung</p>
+              <p id="nextOvulationPredictionLabel" class="font-bold text-white text-sm mt-0.5">--</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gewählter Tag Detailkarte -->
+        <div class="bg-white rounded-3xl p-5 sm:p-6 shadow-sm border border-stone-200/60">
+          <div class="flex items-center justify-between pb-3 mb-4 border-b border-zinc-100">
+            <div>
+              <span class="text-xs font-bold text-zinc-400 uppercase tracking-wider">Ausgewählter Tag</span>
+              <h4 id="selectedDateTitle" class="text-lg font-bold text-zinc-900 mt-0.5">--</h4>
+            </div>
+            <div id="selectedDateBadgeContainer">
+              <!-- Dynamisches Badge -->
+            </div>
+          </div>
+
+          <p id="selectedDateInfo" class="text-sm text-zinc-600 mb-5 leading-relaxed">
+            Klicke auf einen Tag im Kalender, um Details einzusehen oder den Periodenbeginn zu markieren.
+          </p>
+
+          <!-- Aktionen für den Tag -->
+          <div class="flex flex-col gap-2.5">
+            <button id="btnTogglePeriodStart" class="w-full py-2.5 px-4 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2 bg-rose-500 hover:bg-rose-600 text-white shadow-sm shadow-rose-200">
+              <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+              <span id="btnPeriodActionText">Periodenstart eintragen</span>
+            </button>
+            <button id="btnToggleSingleDay" class="w-full py-2 px-4 rounded-xl text-xs font-medium transition border border-rose-200 text-rose-700 hover:bg-rose-50">
+              Einzelnen Blutungstag an/aus
+            </button>
+          </div>
+
+          <!-- Symptome / Notizen Vorschau -->
+          <div class="mt-5 pt-4 border-t border-zinc-100">
+            <label class="block text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">Notiz zu diesem Tag</label>
+            <textarea id="dayNotesInput" rows="2" placeholder="Symptome, Stimmung, Notizen..." class="w-full text-xs p-3 rounded-xl border border-zinc-200 focus:border-rose-400 focus:ring-1 focus:ring-rose-400 outline-none transition resize-none"></textarea>
+            <div class="flex justify-end mt-2">
+              <button id="btnSaveNote" class="text-xs px-3 py-1.5 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-medium transition">
+                Speichern
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </aside>
+
+    </div>
+  </div>
+
+  <!-- MODAL: Einstellungen -->
+  <div id="modalSettings" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop hidden">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl modal-card border border-stone-200/80">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="text-lg font-bold text-zinc-900">Zyklus-Einstellungen</h3>
+        <button id="btnCloseSettings" class="text-zinc-400 hover:text-zinc-700 text-lg p-1">✕</button>
+      </div>
+
+      <div class="space-y-4 text-sm">
+        <div>
+          <label class="block font-medium text-zinc-700 mb-1">Durchschnittliche Zykluslänge (Tage)</label>
+          <div class="flex items-center gap-3">
+            <input type="range" id="inputCycleLengthRange" min="21" max="40" value="28" class="flex-1 accent-rose-500">
+            <span id="cycleLengthVal" class="font-bold text-zinc-900 w-8 text-right">28</span>
+          </div>
+          <span class="text-xs text-zinc-400">Typischer Bereich: 24 - 35 Tage</span>
+        </div>
+
+        <div>
+          <label class="block font-medium text-zinc-700 mb-1">Durchschnittliche Periodendauer (Tage)</label>
+          <div class="flex items-center gap-3">
+            <input type="range" id="inputPeriodDurationRange" min="2" max="10" value="5" class="flex-1 accent-rose-500">
+            <span id="periodDurationVal" class="font-bold text-zinc-900 w-8 text-right">5</span>
+          </div>
+          <span class="text-xs text-zinc-400">Typischer Bereich: 3 - 7 Tage</span>
+        </div>
+
+        <div>
+          <label class="block font-medium text-zinc-700 mb-1">Lutealphase / Eisprung-Offset (Tage vor nächster Periode)</label>
+          <div class="flex items-center gap-3">
+            <input type="range" id="inputLutealPhaseRange" min="10" max="16" value="14" class="flex-1 accent-rose-500">
+            <span id="lutealPhaseVal" class="font-bold text-zinc-900 w-8 text-right">14</span>
+          </div>
+          <span class="text-xs text-zinc-400">Standard ist ca. 14 Tage vor Periodenstart.</span>
+        </div>
+      </div>
+
+      <div class="mt-6 pt-4 border-t border-zinc-100 flex justify-between items-center">
+        <button id="btnResetData" class="text-xs text-rose-500 hover:text-rose-700 font-medium">Zurücksetzen</button>
+        <button id="btnSaveSettings" class="px-5 py-2 rounded-xl text-sm font-semibold bg-rose-500 hover:bg-rose-600 text-white shadow-sm shadow-rose-200">
+          Übernehmen
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Benachrichtigung -->
+  <div id="toastMessage" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-zinc-900 text-white text-xs px-4 py-2.5 rounded-full shadow-lg opacity-0 pointer-events-none transition-opacity duration-300 z-50">
+    Einstellung gespeichert
+  </div>
+
+  <script>
+    // --- DATEN-STATE & INIT ---
+    const STORAGE_KEY = 'zyklus_tracker_app_data';
+
+    // Standardwerte
+    let state = {
+      cycleLength: 28,
+      periodDuration: 5,
+      lutealPhase: 14,
+      periodStarts: [], // Format YYYY-MM-DD (Sortiert)
+      manualPeriodDays: [], // Einzeln manuell gezeichnete Tage
+      notes: {} // { "2026-10-15": "Leichte Krämpfe" }
+    };
+
+    // Aktuell angezeigter Monat im Kalender
+    let currentViewDate = new Date();
+    // Ausgewählter Tag
+    let selectedDateStr = formatDateKey(new Date());
+
+    // Monatsnamen
+    const monthNamesDe = [
+      "Januar", "Februar", "März", "April", "Mai", "Juni", 
+      "Juli", "August", "September", "Oktober", "November", "Dezember"
+    ];
+
+    // Helper: Datum nach YYYY-MM-DD
+    function formatDateKey(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    // Helper: Parse YYYY-MM-DD in Date (Local midnight)
+    function parseDateKey(str) {
+      const parts = str.split('-');
+      return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+    }
+
+    // Datum formatieren für deutsche Anzeige
+    function formatGermanDate(str) {
+      if (!str) return '--';
+      const d = parseDateKey(str);
+      return `${d.getDate()}. ${monthNamesDe[d.getMonth()]} ${d.getFullYear()}`;
+    }
+
+    function addDays(date, days) {
+      const res = new Date(date);
+      res.setDate(res.getDate() + days);
+      return res;
+    }
+
+    // State laden & Demo-Daten erzeugen, falls leer
+    function loadState() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          state = JSON.parse(saved);
+        } else {
+          // Vorgabe: Ein Periodenstart vor ca. 12 Tagen für sofortige Anschaulichkeit
+          const defaultStart = new Date();
+          defaultStart.setDate(defaultStart.getDate() - 13);
+          state.periodStarts = [formatDateKey(defaultStart)];
+        }
+      } catch (e) {
+        console.error("Fehler beim Laden:", e);
+      }
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (e) {
+        console.error("Fehler beim Speichern:", e);
+      }
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toastMessage');
+      toast.textContent = msg;
+      toast.style.opacity = '1';
+      setTimeout(() => {
+        toast.style.opacity = '0';
+      }, 2400);
+    }
+
+    // --- ZYKLUS & BERECHNUNGSLOGIK ---
+    
+    // Berechnet alle relevanten Zyklen (vergangene und zukünftige Prognosen)
+    function getCycleEvents() {
+      const events = {
+        periods: new Set(),
+        predictedPeriods: new Set(),
+        fertileDays: new Set(),
+        ovulationDays: new Set(),
+        cycleStarts: [...state.periodStarts].sort()
+      };
+
+      // 1. Reale Periodentage aus Startdaten ableiten
+      events.cycleStarts.forEach(startStr => {
+        const startDate = parseDateKey(startStr);
+        for (let i = 0; i < state.periodDuration; i++) {
+          const d = addDays(startDate, i);
+          events.periods.add(formatDateKey(d));
+        }
+
+        // Eisprung für diesen Start
+        const ovulationDate = addDays(startDate, state.cycleLength - state.lutealPhase);
+        const ovuKey = formatDateKey(ovulationDate);
+        events.ovulationDays.add(ovuKey);
+
+        // Fruchtbares Fenster: 5 Tage vor Eisprung + Tag des Eisprungs
+        for (let offset = -5; offset <= 0; offset++) {
+          const fDay = addDays(ovulationDate, offset);
+          events.fertileDays.add(formatDateKey(fDay));
+        }
+      });
+
+      // Manuelle Einzeltage hinzufügen
+      if (Array.isArray(state.manualPeriodDays)) {
+        state.manualPeriodDays.forEach(d => events.periods.add(d));
+      }
+
+      // 2. Zukunftsprognosen (für die nächsten 4 Zyklen ab dem letzten bekannten Start)
+      if (events.cycleStarts.length > 0) {
+        const latestStartStr = events.cycleStarts[events.cycleStarts.length - 1];
+        let runningDate = parseDateKey(latestStartStr);
+
+        for (let c = 1; c <= 4; c++) {
+          runningDate = addDays(runningDate, state.cycleLength);
+          const cycleStartKey = formatDateKey(runningDate);
+
+          // Vorhergesagte Periode
+          for (let p = 0; p < state.periodDuration; p++) {
+            const pDay = addDays(runningDate, p);
+            const pDayKey = formatDateKey(pDay);
+            if (!events.periods.has(pDayKey)) {
+              events.predictedPeriods.add(pDayKey);
+            }
+          }
+
+          // Vorhergesagter Eisprung
+          const predOvulation = addDays(runningDate, state.cycleLength - state.lutealPhase);
+          events.ovulationDays.add(formatDateKey(predOvulation));
+
+          // Fruchtbare Tage Vorhersage
+          for (let offset = -5; offset <= 0; offset++) {
+            const fDay = addDays(predOvulation, offset);
+            events.fertileDays.add(formatDateKey(fDay));
+          }
+        }
+      }
+
+      return events;
+    }
+
+    // Ermittelt den aktuellen Status für einen bestimmten Tag
+    function getDayStatus(dateStr, events) {
+      if (events.periods.has(dateStr)) return { type: 'period', label: 'Periode' };
+      if (events.ovulationDays.has(dateStr)) return { type: 'ovulation', label: 'Eisprung (Höchste Fruchtbarkeit)' };
+      if (events.fertileDays.has(dateStr)) return { type: 'fertile', label: 'Fruchtbarer Tag' };
+      if (events.predictedPeriods.has(dateStr)) return { type: 'predicted', label: 'Prognostizierte Periode' };
+      return { type: 'regular', label: 'Follikel- / Lutealphase' };
+    }
+
+    // --- KALENDER RENDERN ---
+
+    function renderCalendar() {
+      const grid = document.getElementById('calendarDaysGrid');
+      grid.innerHTML = '';
+
+      const year = currentViewDate.getFullYear();
+      const month = currentViewDate.getMonth();
+
+      // Header-Text (z.B. Oktober 2026)
+      document.getElementById('calendarMonthYear').textContent = `${monthNamesDe[month]} ${year}`;
+
+      const firstDayOfMonth = new Date(year, month, 1);
+      const lastDayOfMonth = new Date(year, month + 1, 0);
+
+      // Wochentag des 1. Tages (Montag = 0, Sonntag = 6)
+      let startDayOfWeek = firstDayOfMonth.getDay() - 1;
+      if (startDayOfWeek === -1) startDayOfWeek = 6;
+
+      const totalDays = lastDayOfMonth.getDate();
+      const todayKey = formatDateKey(new Date());
+
+      const events = getCycleEvents();
+
+      // Leere Felder vor dem 1. Tag
+      for (let i = 0; i < startDayOfWeek; i++) {
+        const empty = document.createElement('div');
+        empty.className = 'empty-day h-14 sm:h-20 rounded-2xl bg-zinc-50/50 border border-transparent';
+        grid.appendChild(empty);
+      }
+
+      // Tage des Monats
+      for (let day = 1; day <= totalDays; day++) {
+        const cellDate = new Date(year, month, day);
+        const dateKey = formatDateKey(cellDate);
+        const dayStatus = getDayStatus(dateKey, events);
+        const isToday = (dateKey === todayKey);
+        const isSelected = (dateKey === selectedDateStr);
+        const hasNote = state.notes[dateKey] && state.notes[dateKey].trim() !== '';
+
+        const cell = document.createElement('div');
+        cell.className = `day-cell relative h-14 sm:h-20 p-1.5 sm:p-2 rounded-2xl flex flex-col justify-between cursor-pointer border select-none ${
+          isToday ? 'status-today font-bold' : ''
+        }`;
+
+        // Hintergrund & Rand basierend auf Status
+        if (dayStatus.type === 'period') {
+          cell.classList.add('status-period');
+        } else if (dayStatus.type === 'ovulation') {
+          cell.classList.add('status-ovulation');
+        } else if (dayStatus.type === 'fertile') {
+          cell.classList.add('status-fertile');
+        } else if (dayStatus.type === 'predicted') {
+          cell.classList.add('status-predicted');
+        } else {
+          cell.classList.add('bg-stone-50/60', 'border-stone-100', 'text-zinc-700');
+        }
+
+        // Zusätzlicher Auswahl-Ring
+        if (isSelected) {
+          cell.style.outline = '2px solid #27272A';
+          cell.style.outlineOffset = '2px';
+        }
+
+        // Tag-Nummer
+        const dayHeader = document.createElement('div');
+        dayHeader.className = 'flex items-center justify-between';
+
+        const dayNumberSpan = document.createElement('span');
+        dayNumberSpan.className = 'text-xs sm:text-sm font-semibold';
+        dayNumberSpan.textContent = day;
+        dayHeader.appendChild(dayNumberSpan);
+
+        // Icon / Symbol oben rechts
+        if (dayStatus.type === 'period') {
+          const icon = document.createElement('span');
+          icon.innerHTML = `<svg class="w-3 h-3 text-rose-600 fill-current" viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>`;
+          dayHeader.appendChild(icon);
+        } else if (dayStatus.type === 'ovulation') {
+          const icon = document.createElement('span');
+          icon.innerHTML = `<svg class="w-3 h-3 text-indigo-600 fill-current" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6"/><path stroke="currentColor" stroke-width="2" d="M12 2v3m0 14v3M2 12h3m14 0h3"/></svg>`;
+          dayHeader.appendChild(icon);
+        }
+
+        cell.appendChild(dayHeader);
+
+        // Fußzeile der Zelle (Notiz-Punkt oder Zyklustag)
+        const cellFooter = document.createElement('div');
+        cellFooter.className = 'flex items-center justify-between text-[10px] leading-none';
+
+        if (hasNote) {
+          const dot = document.createElement('span');
+          dot.className = 'w-1.5 h-1.5 rounded-full bg-zinc-600 inline-block';
+          dot.title = 'Notiz vorhanden';
+          cellFooter.appendChild(dot);
+        } else {
+          cellFooter.appendChild(document.createElement('span'));
+        }
+
+        cell.appendChild(cellFooter);
+
+        // Klick Event
+        cell.addEventListener('click', () => {
+          selectedDateStr = dateKey;
+          renderCalendar();
+          updateSelectedDayView();
+        });
+
+        grid.appendChild(cell);
+      }
+
+      updateOverviewCards(events);
+    }
+
+    // --- SEITENLEISTE AKTUALISIEREN ---
+
+    function updateOverviewCards(events) {
+      if (!events) events = getCycleEvents();
+
+      const sortedStarts = [...state.periodStarts].sort();
+      const latestStartStr = sortedStarts[sortedStarts.length - 1];
+
+      const cycleDayBadge = document.getElementById('currentCycleDayBadge');
+      const cyclePhaseTitle = document.getElementById('cyclePhaseTitle');
+      const cyclePhaseDesc = document.getElementById('cyclePhaseDesc');
+      const nextPeriodLabel = document.getElementById('nextPeriodPredictionLabel');
+      const nextOvulationLabel = document.getElementById('nextOvulationPredictionLabel');
+
+      if (!latestStartStr) {
+        cycleDayBadge.textContent = 'Keine Daten';
+        cyclePhaseTitle.textContent = 'Bereit zum Starten';
+        cyclePhaseDesc.textContent = 'Tippe auf den Kalendertag, an dem deine letzte Periode begann, und klicke auf "Periodenstart eintragen".';
+        nextPeriodLabel.textContent = '--';
+        nextOvulationLabel.textContent = '--';
+        return;
+      }
+
+      const today = new Date();
+      const latestStartDate = parseDateKey(latestStartStr);
+      const diffTime = today.getTime() - latestStartDate.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+      // Nächste Periode & Eisprung berechnen
+      const nextPeriodDate = addDays(latestStartDate, state.cycleLength);
+      const nextOvulationDate = addDays(latestStartDate, state.cycleLength - state.lutealPhase);
+
+      nextPeriodLabel.textContent = formatGermanDate(formatDateKey(nextPeriodDate));
+      nextOvulationLabel.textContent = formatGermanDate(formatDateKey(nextOvulationDate));
+
+      if (diffDays >= 1 && diffDays <= state.cycleLength) {
+        cycleDayBadge.textContent = `Tag ${diffDays} von ${state.cycleLength}`;
+
+        if (diffDays <= state.periodDuration) {
+          cyclePhaseTitle.textContent = 'Menstruationsphase';
+          cyclePhaseDesc.textContent = 'Gönne deinem Körper Ruhe, Wärme und viel Wasser. Der neue Zyklus hat begonnen.';
+        } else if (diffDays >= (state.cycleLength - state.lutealPhase - 5) && diffDays <= (state.cycleLength - state.lutealPhase)) {
+          if (diffDays === (state.cycleLength - state.lutealPhase)) {
+            cyclePhaseTitle.textContent = 'Tag des Eisprungs';
+            cyclePhaseDesc.textContent = 'Heute ist die Wahrscheinlichkeit für eine Empfängnis am höchsten.';
+          } else {
+            cyclePhaseTitle.textContent = 'Fruchtbares Fenster';
+            cyclePhaseDesc.textContent = 'Östrogen steigt an. Du fühlst dich vitaler und energiegeladener.';
+          }
+        } else if (diffDays > (state.cycleLength - state.lutealPhase)) {
+          cyclePhaseTitle.textContent = 'Lutealphase';
+          cyclePhaseDesc.textContent = 'Progesteron dominiert. Eine gute Phase für sanfte Bewegung und Regeneration.';
+        } else {
+          cyclePhaseTitle.textContent = 'Follikelphase';
+          cyclePhaseDesc.textContent = 'Neue Follikel reifen heran, das Energielevel steigt spürbar.';
+        }
+      } else if (diffDays > state.cycleLength) {
+        const daysOver = diffDays - state.cycleLength;
+        cycleDayBadge.textContent = `Tag ${diffDays}`;
+        cyclePhaseTitle.textContent = `Tag ${daysOver} überfällig`;
+        cyclePhaseDesc.textContent = 'Deine Periode ist später als gewohnt. Wenn sie heute begonnen hat, trage den Startzeitpunkt ein.';
+      } else {
+        cycleDayBadge.textContent = 'Zyklus aktiv';
+        cyclePhaseTitle.textContent = 'Eingetragener Start';
+        cyclePhaseDesc.textContent = `Letzter erfasster Beginn: ${formatGermanDate(latestStartStr)}`;
+      }
+    }
+
+    function updateSelectedDayView() {
+      const titleEl = document.getElementById('selectedDateTitle');
+      const badgeCont = document.getElementById('selectedDateBadgeContainer');
+      const infoEl = document.getElementById('selectedDateInfo');
+      const notesInput = document.getElementById('dayNotesInput');
+      const btnPeriodAction = document.getElementById('btnPeriodActionText');
+
+      titleEl.textContent = formatGermanDate(selectedDateStr);
+
+      const events = getCycleEvents();
+      const status = getDayStatus(selectedDateStr, events);
+      const isPeriodStart = state.periodStarts.includes(selectedDateStr);
+      const isSinglePeriodDay = state.manualPeriodDays.includes(selectedDateStr);
+
+      badgeCont.innerHTML = '';
+      const badge = document.createElement('span');
+
+      if (status.type === 'period') {
+        badge.className = 'pill-badge bg-rose-100 text-rose-800 border border-rose-300';
+        badge.textContent = isPeriodStart ? 'Periodenstart' : 'Periodentag';
+        infoEl.textContent = isPeriodStart 
+          ? 'An diesem Tag wurde der Beginn eines Zyklus eingetragen.'
+          : 'Dieser Tag liegt im aktuellen Menstruationsfenster.';
+      } else if (status.type === 'ovulation') {
+        badge.className = 'pill-badge bg-indigo-100 text-indigo-800 border border-indigo-300 font-semibold';
+        badge.textContent = 'Eisprung';
+        infoEl.textContent = 'Höchste Fruchtbarkeit. Die Ovulation findet voraussichtlich an diesem Tag statt.';
+      } else if (status.type === 'fertile') {
+        badge.className = 'pill-badge bg-emerald-100 text-emerald-800 border border-emerald-300';
+        badge.textContent = 'Fruchtbar';
+        infoEl.textContent = 'Erhöhte Wahrscheinlichkeit einer Befruchtung in diesem Zeitfenster.';
+      } else if (status.type === 'predicted') {
+        badge.className = 'pill-badge bg-rose-50 text-rose-600 border border-dashed border-rose-300';
+        badge.textContent = 'Vorhersage';
+        infoEl.textContent = 'Prognostizierter Menstruationstag basierend auf deiner durchschnittlichen Zykluslänge.';
+      } else {
+        badge.className = 'pill-badge bg-zinc-100 text-zinc-600 border border-zinc-200';
+        badge.textContent = 'Regulärer Tag';
+        infoEl.textContent = 'Keine erhöhte Fruchtbarkeit oder Blutung für diesen Tag vorausberechnet.';
+      }
+
+      badgeCont.appendChild(badge);
+
+      // Button Beschriftung anpassen
+      if (isPeriodStart) {
+        btnPeriodAction.textContent = 'Periodenstart entfernen';
+      } else {
+        btnPeriodAction.textContent = 'Als Periodenstart eintragen';
+      }
+
+      // Notizen laden
+      notesInput.value = state.notes[selectedDateStr] || '';
+    }
+
+    // --- EVENT LISTENER & INTERAKTIONEN ---
+
+    // Monatswechsel
+    document.getElementById('prevMonth').addEventListener('click', () => {
+      currentViewDate.setMonth(currentViewDate.getMonth() - 1);
+      renderCalendar();
+    });
+
+    document.getElementById('nextMonth').addEventListener('click', () => {
+      currentViewDate.setMonth(currentViewDate.getMonth() + 1);
+      renderCalendar();
+    });
+
+    // "Heute" Button
+    document.getElementById('btnToday').addEventListener('click', () => {
+      currentViewDate = new Date();
+      selectedDateStr = formatDateKey(new Date());
+      renderCalendar();
+      updateSelectedDayView();
+    });
+
+    // Periodenstart ein-/austragen
+    document.getElementById('btnTogglePeriodStart').addEventListener('click', () => {
+      const idx = state.periodStarts.indexOf(selectedDateStr);
+      if (idx > -1) {
+        state.periodStarts.splice(idx, 1);
+        showToast('Periodenstart entfernt');
+      } else {
+        state.periodStarts.push(selectedDateStr);
+        state.periodStarts.sort();
+        showToast('Neuer Periodenstart eingetragen!');
+      }
+      saveState();
+      renderCalendar();
+      updateSelectedDayView();
+    });
+
+    // Einzelnen Blutungstag toggeln
+    document.getElementById('btnToggleSingleDay').addEventListener('click', () => {
+      const idx = state.manualPeriodDays.indexOf(selectedDateStr);
+      if (idx > -1) {
+        state.manualPeriodDays.splice(idx, 1);
+        showToast('Blutungstag entfernt');
+      } else {
+        state.manualPeriodDays.push(selectedDateStr);
+        showToast('Blutungstag hinzugefügt');
+      }
+      saveState();
+      renderCalendar();
+      updateSelectedDayView();
+    });
+
+    // Notiz speichern
+    document.getElementById('btnSaveNote').addEventListener('click', () => {
+      const text = document.getElementById('dayNotesInput').value;
+      if (text.trim() === '') {
+        delete state.notes[selectedDateStr];
+      } else {
+        state.notes[selectedDateStr] = text.trim();
+      }
+      saveState();
+      renderCalendar();
+      showToast('Notiz gesichert');
+    });
+
+    // Modal Einstellungen Steuerung
+    const modalSettings = document.getElementById('modalSettings');
+    const rangeCycle = document.getElementById('inputCycleLengthRange');
+    const rangePeriod = document.getElementById('inputPeriodDurationRange');
+    const rangeLuteal = document.getElementById('inputLutealPhaseRange');
+    const valCycle = document.getElementById('cycleLengthVal');
+    const valPeriod = document.getElementById('periodDurationVal');
+    const valLuteal = document.getElementById('lutealPhaseVal');
+
+    document.getElementById('btnSettings').addEventListener('click', () => {
+      rangeCycle.value = state.cycleLength;
+      rangePeriod.value = state.periodDuration;
+      rangeLuteal.value = state.lutealPhase;
+      valCycle.textContent = state.cycleLength;
+      valPeriod.textContent = state.periodDuration;
+      valLuteal.textContent = state.lutealPhase;
+      modalSettings.classList.remove('hidden');
+    });
+
+    document.getElementById('btnCloseSettings').addEventListener('click', () => {
+      modalSettings.classList.add('hidden');
+    });
+
+    rangeCycle.addEventListener('input', (e) => valCycle.textContent = e.target.value);
+    rangePeriod.addEventListener('input', (e) => valPeriod.textContent = e.target.value);
+    rangeLuteal.addEventListener('input', (e) => valLuteal.textContent = e.target.value);
+
+    document.getElementById('btnSaveSettings').addEventListener('click', () => {
+      state.cycleLength = parseInt(rangeCycle.value, 10);
+      state.periodDuration = parseInt(rangePeriod.value, 10);
+      state.lutealPhase = parseInt(rangeLuteal.value, 10);
+      saveState();
+      modalSettings.classList.add('hidden');
+      renderCalendar();
+      updateSelectedDayView();
+      showToast('Einstellungen aktualisiert');
+    });
+
+    // Alle Daten zurücksetzen
+    document.getElementById('btnResetData').addEventListener('click', () => {
+      state.periodStarts = [];
+      state.manualPeriodDays = [];
+      state.notes = {};
+      state.cycleLength = 28;
+      state.periodDuration = 5;
+      state.lutealPhase = 14;
+      saveState();
+      modalSettings.classList.add('hidden');
+      renderCalendar();
+      updateSelectedDayView();
+      showToast('Daten auf Standard zurückgesetzt');
+    });
+
+    // Initialisierung beim Laden
+    window.addEventListener('DOMContentLoaded', () => {
+      loadState();
+      renderCalendar();
+      updateSelectedDayView();
+    });
+  </script>
+  <script src="app.js"></script>
+</body>
+</html>
