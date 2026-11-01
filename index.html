@@ -3,16 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Zyklus & Perioden Kalender</title>
+  <title>Perioden-Kalender</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="manifest" href="manifest.json">
+
+  <link rel="ptracker-icon" href="ptracker-icon.png">
+  <meta name="apple-mobile-web-app-title" content="Zyker">
+
   <style>
     :root {
       --font-stack: "Helvetica Neue", Helvetica, Arial, sans-serif;
       --color-bg: #FAF7F5;
       --color-card: #FFFFFF;
-      --color-primary-rose: #F472B6;
-      --color-period: #F43F5E;
+      --color-primary-rose: #Ffcace;
+      --color-period: #730724;
       --color-period-soft: #FFE4E6;
       --color-period-border: #FDA4AF;
       --color-predicted: #FECDD3;
@@ -43,7 +47,7 @@
     /* Status-Highlights für Kalendertage */
     .status-period {
       background: linear-gradient(145deg, #FFE4E6, #FECDD3) !important;
-      border: 1.5px solid #F43F5E !important;
+      border: 1.5px solid #730724 !important;
       color: #9F1239 !important;
       font-weight: 600;
     }
@@ -120,12 +124,12 @@
         <img 
           src="ptracker-icon.png" 
           alt="App Icon" 
-          class="w-12 h-12 object-cover shadow-md shadow-rose-200 flex-shrink-0" 
+          class="w-auto h-auto object-cover shadow-md shadow-rose-200 flex-shrink-0" 
           style="border-radius: 5px;"
         >
         <div>
           <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900">Zyklus- & Fruchtbarkeitskalender</h1>
-          <p class="text-xs sm:text-sm text-zinc-500">Natürliche Vorhersagen & Körperbewusstsein</p>
+          <p class="text-xs sm:text-sm text-zinc-500">Besser wissen als nicht wissen</p>
         </div>
       </div>
       <div class="flex items-center gap-2">
@@ -202,7 +206,7 @@
       <aside class="lg:col-span-4 flex flex-col gap-5">
         
         <!-- Zyklus-Statuskarte -->
-        <div class="bg-gradient-to-br from-rose-500 to-pink-500 rounded-3xl p-6 text-white shadow-lg shadow-rose-200">
+        <div class="bg-gradient-to-br from-rose-500 to-[#730724] rounded-3xl p-6 text-white shadow-lg shadow-rose-200">
           <div class="flex items-center justify-between mb-4">
             <span class="text-xs uppercase tracking-wider font-semibold text-rose-100">Aktueller Status</span>
             <span id="currentCycleDayBadge" class="bg-white/20 backdrop-blur-sm text-white px-2.5 py-1 rounded-full text-xs font-medium">Tag --</span>
