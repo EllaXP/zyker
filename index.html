@@ -124,7 +124,7 @@
         <img 
           src="ptracker-icon.png" 
           alt="App Icon" 
-          class="w-auto h-auto object-cover shadow-md shadow-rose-200 flex-shrink-0" 
+          class="w-[25vw] h-[25vw] object-cover shadow-md shadow-rose-200 flex-shrink-0" 
           style="border-radius: 5px;"
         >
         <div>
@@ -306,6 +306,29 @@
             <span id="lutealPhaseVal" class="font-bold text-zinc-900 w-8 text-right">14</span>
           </div>
           <span class="text-xs text-zinc-400">Standard ist ca. 14 Tage vor Periodenstart.</span>
+        </div>
+      </div>
+
+      <!-- Daten-Backup & Wiederherstellung -->
+      <div class="mt-6 p-4 bg-white/70 rounded-2xl border border-rose-100/60 shadow-sm">
+        <h3 class="text-sm font-semibold text-zinc-800 mb-2">Datensicherung</h3>
+        <p class="text-xs text-zinc-500 mb-3">
+          Sichere deine Daten als Datei auf deinem iPhone oder stelle ein früheres Backup wieder her.
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <button 
+            id="btnExportBackup" 
+            class="px-3 py-2 text-xs font-medium rounded-xl text-white transition shadow-sm"
+            style="background: linear-gradient(to right, #730724, #5d1526);"
+          >
+            Backup herunterladen
+          </button>
+          <label 
+            class="px-3 py-2 text-xs font-medium rounded-xl bg-rose-50 hover:bg-rose-100 text-[#730724] border border-rose-200/60 cursor-pointer transition text-center"
+          >
+            Backup einspielen
+            <input type="file" id="importFileInput" accept=".json" class="hidden">
+          </label>
         </div>
       </div>
 
@@ -574,6 +597,8 @@
 
         cell.appendChild(dayHeader);
 
+        
+
         // Fußzeile der Zelle (Notiz-Punkt oder Zyklustag)
         const cellFooter = document.createElement('div');
         cellFooter.className = 'flex items-center justify-between text-[10px] leading-none';
@@ -601,6 +626,7 @@
 
       updateOverviewCards(events);
     }
+
 
     // --- SEITENLEISTE AKTUALISIEREN ---
 

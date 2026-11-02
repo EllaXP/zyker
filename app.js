@@ -322,6 +322,9 @@ function initListeners() {
     renderCalendar();
   });
 
+  document.getElementById('btnExportBackup')?.addEventListener('click', exportBackup);
+  document.getElementById('importFileInput')?.addEventListener('change', importBackup);
+
   // Zyklus-Einstellungen ändern
   const cycleInput = document.getElementById('cycleLengthInput');
   const periodInput = document.getElementById('periodLengthInput');
@@ -357,3 +360,64 @@ document.addEventListener('DOMContentLoaded', () => {
   initListeners();
   renderCalendar();
 });
+
+// 1. Daten exportieren und als JSON-Datei herunterladen
+function exportBackup() {
+  const backupData = {
+    version: 1,
+    exportDate: new Date().toISOString(),
+    periodStarts: state.periodStarts,
+    notes: state.notes,
+    settings: state.settings
+  };
+
+  const jsonString = JSON.stringify(backupData, null, 2);
+  const blob = new Blob([jsonString], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+
+  // Erzeugt einen virtuellen Klick zum Herunterladen
+  const a = document.createElement('a');
+  const today = new Date().toISOString().split('T')[0];
+  a.href = url;
+  a.download = `zyklus_backup_${today}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// 2. Daten aus einer ausgewählten JSON-Datei einlesen
+function importBackup(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+
+      // Prüfen, ob die Datei gültige Daten enthält
+      if (Array.isArray(data.periodStarts) && typeof data.notes === 'object') {
+        state.periodStarts = data.periodStarts;
+        state.notes = data.notes;
+        if (data.settings) {
+          state.settings = { ...state.settings, ...data.settings };
+        }
+
+        // Im localStorage sichern und Kalender neu zeichnen
+        persistData();
+        renderCalendar();
+
+        alert('Backup erfolgreich wiederhergestellt!');
+      } else {
+        alert('Die ausgewählte Datei enthält kein gültiges Backup-Format.');
+      }
+    } catch (err) {
+      alert('Fehler beim Lesen der Datei. Bitte prüfe die JSON-Datei.');
+    }
+  };
+
+  reader.readAsText(file);
+  // Zurücksetzen, damit dieselbe Datei erneut ausgewählt werden kann
+  event.target.value = '';
+}
